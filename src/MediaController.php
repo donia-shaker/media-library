@@ -43,22 +43,25 @@ class MediaController
      *
      * @throws \Exception If an error occurs during the image upload process.
      */
-    public function uploadImage($model, $model_id, $file)
+    public function uploadImage($model, $model_id, $file, $format = null)
     {
 
-        if (! is_dir($this->directory.'/images/'.$model)) {
-            mkdir(($this->directory.'/images/'.$model), 0777, true);
+        if (!is_dir($this->directory . '/images/' . $model)) {
+            mkdir(($this->directory . '/images/' . $model), 0777, true);
         }
 
-        $data['name'] = date('YmdHis').'-'.uniqid();
+        $data['name'] = date('YmdHis') . '-' . uniqid();
 
-        $data['file_name'] = $model.'/'.$model_id.'-'.$data['name'].'.webp';
+        $data['extension'] = $format == null ? config('media.default_image_format') : $format;
+
+
+        $data['file_name'] = $model . '/' . $model_id . '-' . $data['name'] . '.' . $data['extension'];
 
         try {
             $this->manager
                 ->read($file)
-                ->toWebp(80)
-                ->save($this->directory.'/images/'.$data['file_name']);
+                ->encodeByExtension($data['extension'], 80)
+                ->save($this->directory . '/images/' . $data['file_name']);
             $data['image'] = $data['file_name'];
         } catch (\Exception $e) {
             $data['image'] = null;
@@ -77,17 +80,18 @@ class MediaController
      *
      * @throws \Exception Description of exception if it occurs.
      */
-    public function createThumb($model, $model_id, $name)
+    public function createThumb($model, $model_id, $name, $format = null)
     {
 
-        if (! file_exists($this->directory.'/images/'.$model.'/thumb/')) {
-            mkdir(($this->directory.'/images/'.$model.'/thumb/'), 0777, true);
+        if (!file_exists($this->directory . '/images/' . $model . '/thumb/')) {
+            mkdir(($this->directory . '/images/' . $model . '/thumb/'), 0777, true);
         }
-        $thumb_name = $model.'/thumb/'.$model_id.'-'.$name.'.webp';
+        $thumb_name = $model . '/thumb/' . $model_id . '-' . $name . '.webp';
+        $data['extension'] = $format == null ? config('media.default_image_format') : $format;
 
         try {
             $this->manager
-                ->read($this->directory.'/images/'.$model.'/'.$model_id.'-'.$name.'.webp')->scale(width: 400)->save($this->directory.'/images/'.$thumb_name);
+                ->read($this->directory . '/images/' . $model . '/' . $model_id . '-' . $name . '.'.$data['extension'])->scale(width: 400)->save($this->directory . '/images/' . $thumb_name);
             $data['thumb'] = $thumb_name;
         } catch (\Exception $e) {
             $data['thumb'] = null;
@@ -104,18 +108,18 @@ class MediaController
      * @param  mixed  $file  The file to be saved.
      * @return array Data about the saved image and thumbnail.
      */
-    public function saveImage($model, $model_id, $file)
+    public function saveImage($model, $model_id, $file, $format = null)
     {
-        $data['image'] = $this->uploadImage($model, $model_id, $file);
+        $data['image'] = $this->uploadImage($model, $model_id, $file, $format);
         if ($data['image']['image'] == null) {
-            $data['image'] = $this->uploadImage($model, $model_id, $file);
+            $data['image'] = $this->uploadImage($model, $model_id, $file, $format);
         }
 
         $new_image = Media::create([
             'model' => $model,
             'model_id' => $model_id,
             'file_name' => $data['image']['name'],
-            'format' => 'webp',
+            'format' => $data['image']['extension'],
         ]);
 
         // upload thumb
@@ -140,19 +144,18 @@ class MediaController
      */
     public function uploadTempImage($model, $model_id, $file)
     {
-        if (! file_exists($this->directory.'/temp/images/'.$model)) {
-            mkdir(($this->directory.'/temp/images/'.$model), 0777, true);
+        if (!file_exists($this->directory . '/temp/images/' . $model)) {
+            mkdir(($this->directory . '/temp/images/' . $model), 0777, true);
         }
 
-        $data['name'] = date('YmdHis').'-'.uniqid();
+        $data['name'] = date('YmdHis') . '-' . uniqid();
         $data['extension'] = explode('.', $file->getClientOriginalName())[1];
 
-        $data['file_name'] = $model.'/'.$model_id.'-'.$data['name'].'.'.$data['extension'];
+        $data['file_name'] = $model . '/' . $model_id . '-' . $data['name'] . '.' . $data['extension'];
 
         $this->manager
             ->read($file)
-            ->toWebp(80)
-            ->save($this->directory.'/temp/images/'.$data['file_name']);
+            ->save($this->directory . '/temp/images/' . $data['file_name']);
 
         $data['image'] = $data['file_name'];
 
@@ -198,7 +201,7 @@ class MediaController
     {
         $image = Media::where('id', $id)->first();
 
-        $main_image = $this->manager->read($this->directory.'/temp/images/'.$image->model.'/'.$image->model_id.'-'.$image->file_name.'.'.$image->format);
+        $main_image = $this->manager->read($this->directory . '/temp/images/' . $image->model . '/' . $image->model_id . '-' . $image->file_name . '.' . $image->format);
 
         $this->saveImage($model, $model_id, $main_image);
 
@@ -219,12 +222,12 @@ class MediaController
     {
         $image = Media::where('id', $id)->first();
 
-        if (! file_exists($this->directory.'/temp/images/'.$image->model.'/'.$image->model_id.'-'.$image->file_name.'.'.$image->format) || $image->is_temp == 0) {
+        if (!file_exists($this->directory . '/temp/images/' . $image->model . '/' . $image->model_id . '-' . $image->file_name . '.' . $image->format) || $image->is_temp == 0) {
             return response()->json([
                 'message' => 'There is no image file to delete or its not a temp image',
             ], 500);
         } else {
-            File::delete($this->directory.'/temp/images/'.$image->model.'/'.$image->model_id.'-'.$image->file_name.'.'.$image->format);
+            File::delete($this->directory . '/temp/images/' . $image->model . '/' . $image->model_id . '-' . $image->file_name . '.' . $image->format);
         }
 
         $image->delete();
@@ -244,16 +247,16 @@ class MediaController
      */
     public function uploadFile(string $model, int $model_id, UploadedFile $file): JsonResponse
     {
-        $data['name'] = date('YmdHis').'-'.uniqid().'-'.explode('.', $file->getClientOriginalName())[0];
+        $data['name'] = date('YmdHis') . '-' . uniqid() . '-' . explode('.', $file->getClientOriginalName())[0];
         $data['extension'] = explode('.', $file->getClientOriginalName())[1];
 
-        if (! file_exists($this->directory.'/'.$data['extension'].'/'.$model)) {
-            mkdir(($this->directory.'/'.$data['extension'].'/'.$model), 0777, true);
+        if (!file_exists($this->directory . '/' . $data['extension'] . '/' . $model)) {
+            mkdir(($this->directory . '/' . $data['extension'] . '/' . $model), 0777, true);
         }
 
-        $data['file_name'] = $model.'/'.$model_id.'-'.$data['name'].'.'.$data['extension'];
+        $data['file_name'] = $model . '/' . $model_id . '-' . $data['name'] . '.' . $data['extension'];
 
-        $file->move($this->directory.'/'.$data['extension'].'/'.$model, $data['file_name']);
+        $file->move($this->directory . '/' . $data['extension'] . '/' . $model, $data['file_name']);
         Media::create([
             'model' => $model,
             'model_id' => $model_id,
@@ -276,16 +279,16 @@ class MediaController
      */
     public function audio(string $model, int $model_id, UploadedFile $file): JsonResponse
     {
-        if (! file_exists($this->directory.'/audio/'.$model)) {
-            mkdir(($this->directory.'/audio/'.$model), 0777, true);
+        if (!file_exists($this->directory . '/audio/' . $model)) {
+            mkdir(($this->directory . '/audio/' . $model), 0777, true);
         }
 
-        $data['name'] = date('YmdHis').'-'.uniqid().'-'.explode('.', $file->getClientOriginalName())[0];
+        $data['name'] = date('YmdHis') . '-' . uniqid() . '-' . explode('.', $file->getClientOriginalName())[0];
         $data['extension'] = explode('.', $file->getClientOriginalName())[1];
 
-        $data['file_name'] = $model.'/'.$model_id.'-'.$data['name'].'.'.$data['extension'];
+        $data['file_name'] = $model . '/' . $model_id . '-' . $data['name'] . '.' . $data['extension'];
 
-        $file->move($this->directory.'/audio/'.$model, $data['file_name']);
+        $file->move($this->directory . '/audio/' . $model, $data['file_name']);
         Media::create([
             'model' => $model,
             'model_id' => $model_id,
@@ -311,16 +314,16 @@ class MediaController
     public function video(string $model, int $model_id, UploadedFile $file): JsonResponse
     {
 
-        if (! file_exists($this->directory.'/video/'.$model)) {
-            mkdir(($this->directory.'/video/'.$model), 0777, true);
+        if (!file_exists($this->directory . '/video/' . $model)) {
+            mkdir(($this->directory . '/video/' . $model), 0777, true);
         }
 
-        $data['name'] = date('YmdHis').'-'.uniqid().'-'.explode('.', $file->getClientOriginalName())[0];
+        $data['name'] = date('YmdHis') . '-' . uniqid() . '-' . explode('.', $file->getClientOriginalName())[0];
         $data['extension'] = explode('.', $file->getClientOriginalName())[1];
 
-        $data['file_name'] = $model.'/'.$model_id.'-'.$data['name'].'.'.$data['extension'];
+        $data['file_name'] = $model . '/' . $model_id . '-' . $data['name'] . '.' . $data['extension'];
 
-        $file->move($this->directory.'/video/'.$model, $data['file_name']);
+        $file->move($this->directory . '/video/' . $model, $data['file_name']);
         Media::create([
             'model' => $model,
             'model_id' => $model_id,
