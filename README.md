@@ -1,6 +1,5 @@
-
 # Media Library
-`DoniaShaker\MediaLibrary` package provides a set of functions for handling media files, including images, audio, video, and PDF files. 
+This package provides a set of functions for handling media files, including images, audio, video, and PDF files. 
 
 - [Media Library](#media-library)
   - [Features](#features)
