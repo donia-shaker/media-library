@@ -1,39 +1,39 @@
 {
-    "name": "donia-shaker/media-library",
-    "type": "library",
-    "license": "MIT",
-    "autoload": {
-        "psr-4": {
-            "DoniaShaker\\MediaLibrary\\": "src/"
-        }
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "DoniaShaker\\MediaLibrary\\Tests\\": "tests/"
-        }
-    },
-    "authors": [
-        {
-            "name": "Donia Shaker",
-            "email": "donia.shaker11@gmail.com"
-        }
-    ],
-    "minimum-stability": "stable",
-    "require": {
-        "laravel/framework": ">=10.0.0 <12.0.0",
-        "intervention/image": "^3.6",
-        "ivoglent/ffmpeg-composer-bin": "^1.3"
-    },
-    "require-dev": {
-        "phpunit/phpunit": "^11.1",
-        "orchestra/testbench": "^9.0",
-        "laravel/pint": "^1.15"
-    },
-    "extra": {
-        "laravel": {
-            "providers": [
-                "DoniaShaker\\MediaLibrary\\MediaLibraryServiceProvider"
-            ]
-        }
+  "name": "donia-shaker/media-library",
+  "type": "library",
+  "license": "MIT",
+  "autoload": {
+    "psr-4": {
+      "DoniaShaker\\MediaLibrary\\": "src/"
     }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "DoniaShaker\\MediaLibrary\\Tests\\": "tests/"
+    }
+  },
+  "authors": [
+    {
+      "name": "Donia Shaker",
+      "email": "donia.shaker11@gmail.com"
+    }
+  ],
+  "minimum-stability": "stable",
+  "require": {
+    "laravel/framework": ">=10.0.0 <13.0.0",
+    "intervention/image": "^3.6",
+    "ivoglent/ffmpeg-composer-bin": "^1.3"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^11.1",
+    "orchestra/testbench": "^9.0",
+    "laravel/pint": "^1.15"
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "DoniaShaker\\MediaLibrary\\MediaLibraryServiceProvider"
+      ]
+    }
+  }
 }
