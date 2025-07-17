@@ -19,9 +19,9 @@ class Media extends Model
         $directory = config('media.useStorage') ? config('media.storageUrl') : config('media.publicUrl');
         $type = $this->is_temp ? '/temp' : '';
 
-        if(isImageFormat($this->format))
-            return $directory.$type.'/images'.'/'.$this->model.'/'.$this->model_id.'-'.$this->file_name.'.'.$this->format;
-        return $directory.$type.'/'.$this->extension.'/'.$this->model.'/'.$this->model_id.'-'.$this->file_name.'.'.$this->format;
+        if ($this->isImageFormat($this->format))
+            return $directory . $type . '/images' . '/' . $this->model . '/' . $this->model_id . '-' . $this->file_name . '.' . $this->format;
+        return $directory . $type . '/' . $this->extension . '/' . $this->model . '/' . $this->model_id . '-' . $this->file_name . '.' . $this->format;
     }
 
     public function getThumbUrlAttribute()
@@ -30,7 +30,11 @@ class Media extends Model
 
         $type = $this->is_temp ? null : '/thumb';
 
-        return $type == null ? null : $directory.'/images'.'/'.$this->model.$type.'/'.$this->model_id.'-'.$this->file_name.'.'.$this->format;
+        return $type == null ? null : $directory . '/images' . '/' . $this->model . $type . '/' . $this->model_id . '-' . $this->file_name . '.' . $this->format;
+    }
 
+    function isImageFormat($format)
+    {
+        return in_array(strtolower($format), ['jpg', 'svg', 'jpeg', 'png', 'gif', 'webp']);
     }
 }
