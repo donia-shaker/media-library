@@ -19,7 +19,9 @@ class Media extends Model
         $directory = config('media.useStorage') ? config('media.storageUrl') : config('media.publicUrl');
         $type = $this->is_temp ? '/temp' : '';
 
-        return $directory.$type.'/images'.'/'.$this->model.'/'.$this->model_id.'-'.$this->file_name.'.'.$this->format;
+        if(isImageFormat($this->format))
+            return $directory.$type.'/images'.'/'.$this->model.'/'.$this->model_id.'-'.$this->file_name.'.'.$this->format;
+        return $directory.$type.'/'.$this->extension.'/'.$this->model.'/'.$this->model_id.'-'.$this->file_name.'.'.$this->format;
     }
 
     public function getThumbUrlAttribute()
