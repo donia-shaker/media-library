@@ -21,7 +21,7 @@ class Media extends Model
 
         if ($this->isImageFormat($this->format))
             return $directory . $type . '/images' . '/' . $this->model . '/' . $this->model_id . '-' . $this->file_name . '.' . $this->format;
-        return $directory . $type . '/' . $this->extension . '/' . $this->model . '/' . $this->model_id . '-' . $this->file_name . '.' . $this->format;
+        return $directory . $type . '/' . $this->format . '/' . $this->model . '/' . $this->model_id . '-' . $this->file_name . '.' . $this->format;
     }
 
     public function getThumbUrlAttribute()
