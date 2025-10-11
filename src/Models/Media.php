@@ -19,9 +19,17 @@ class Media extends Model
         $directory = config('media.useStorage') ? config('media.storageUrl') : config('media.publicUrl');
         $type = $this->is_temp ? '/temp' : '';
 
-        if ($this->isImageFormat($this->format))
-            return $directory . $type . '/images' . '/' . $this->model . '/' . $this->model_id . '-' . $this->file_name . '.' . $this->format;
-        return $directory . $type . '/' . $this->format . '/' . $this->model . '/' . $this->model_id . '-' . $this->file_name . '.' . $this->format;
+        if ($this->isImageFormat($this->format)) {
+            $folder = 'images';
+        } elseif ($this->isVideoFormat($this->format)) {
+            $folder = 'video';
+        } elseif ($this->isAudioFormat($this->format)) {
+            $folder = 'audio';
+        } else {
+            $folder = $this->format; // أي نوع آخر
+        }
+
+        return $directory . $type . '/' . $folder . '/' . $this->model . '/' . $this->model_id . '-' . $this->file_name . '.' . $this->format;
     }
 
     public function getThumbUrlAttribute()
@@ -36,5 +44,33 @@ class Media extends Model
     function isImageFormat($format)
     {
         return in_array(strtolower($format), ['jpg', 'svg', 'jpeg', 'png', 'gif', 'webp']);
+    }
+
+    // تحقق إذا الملف فيديو
+    function isVideoFormat($format)
+    {
+        return in_array(strtolower($format), [
+            'mp4',
+            'mov',
+            'avi',
+            'mkv',
+            'webm',
+            'flv',
+            'wmv',
+            'm4v'
+        ]);
+    }
+
+    // تحقق إذا الملف صوت
+    function isAudioFormat($format)
+    {
+        return in_array(strtolower($format), [
+            'mp3',
+            'wav',
+            'ogg',
+            'm4a',
+            'flac',
+            'aac'
+        ]);
     }
 }
