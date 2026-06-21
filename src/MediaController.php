@@ -91,7 +91,7 @@ class MediaController
 
         try {
             $this->manager
-                ->read($this->directory . '/images/' . $model . '/' . $model_id . '-' . $name . '.'.$data['extension'])->scale(width: 400)->save($this->directory . '/images/' . $thumb_name);
+                ->read($this->directory . '/images/' . $model . '/' . $model_id . '-' . $name . '.' . $data['extension'])->scale(width: 400)->save($this->directory . '/images/' . $thumb_name);
             $data['thumb'] = $thumb_name;
         } catch (\Exception $e) {
             $data['thumb'] = null;
@@ -245,28 +245,93 @@ class MediaController
      * @param  UploadedFile  $file  The file to be uploaded.
      * @return JsonResponse The JSON response indicating the success of the upload.
      */
-    public function uploadFile(string $model, int $model_id, UploadedFile $file): JsonResponse
-    {
-        $data['name'] = date('YmdHis') . '-' . uniqid() . '-' . explode('.', $file->getClientOriginalName())[0];
-        $data['extension'] = explode('.', $file->getClientOriginalName())[1];
-
-        if (!file_exists($this->directory . '/' . $data['extension'] . '/' . $model)) {
-            mkdir(($this->directory . '/' . $data['extension'] . '/' . $model), 0777, true);
+    public function uploadFile(
+        string $model,
+        int $model_id,
+        UploadedFile $file
+    ): JsonResponse {
+        if (!$file->isValid()) {
+            return response()->json([
+                'message' => 'الملف المرفوع غير صالح.',
+                'error' => $file->getErrorMessage(),
+            ], 422);
         }
 
-        $data['file_name'] = $model . '/' . $model_id . '-' . $data['name'] . '.' . $data['extension'];
+        // يجب قراءة معلومات الملف قبل move
+        $originalName = pathinfo(
+            $file->getClientOriginalName(),
+            PATHINFO_FILENAME
+        );
 
-        $file->move($this->directory . '/' . $data['extension'] . '/' . $model, $data['file_name']);
-        Media::create([
-            'model' => $model,
-            'model_id' => $model_id,
-            'file_name' => $data['name'],
-            'format' => $data['extension'],
-        ]);
+        $extension = strtolower(
+            $file->getClientOriginalExtension()
+        );
 
-        return response()->json([
-            'message' => 'success',
-        ], 200);
+        $safeOriginalName = preg_replace(
+            '/[^A-Za-z0-9_-]/',
+            '-',
+            $originalName
+        );
+
+        $data['name'] = now()->format('YmdHis')
+            . '-'
+            . uniqid()
+            . '-'
+            . trim($safeOriginalName, '-');
+
+        // اسم الملف فقط، بدون model/
+        $storedFileName = $model_id
+            . '-'
+            . $data['name']
+            . '.'
+            . $extension;
+
+        $destinationDirectory = $this->directory
+            . DIRECTORY_SEPARATOR
+            . $extension
+            . DIRECTORY_SEPARATOR
+            . $model;
+
+        File::ensureDirectoryExists(
+            $destinationDirectory,
+            0755,
+            true
+        );
+
+        try {
+            // يجب أن يكون آخر استخدام لكائن الملف
+            $file->move(
+                $destinationDirectory,
+                $storedFileName
+            );
+
+            $media = Media::create([
+                'model' => $model,
+                'model_id' => $model_id,
+                'file_name' => $data['name'],
+                'format' => $extension,
+            ]);
+
+            return response()->json([
+                'message' => 'success',
+                'data' => [
+                    'id' => $media->id,
+                    'file_name' => $storedFileName,
+                    'path' => $extension
+                        . '/'
+                        . $model
+                        . '/'
+                        . $storedFileName,
+                ],
+            ], 200);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return response()->json([
+                'message' => 'حدث خطأ أثناء رفع الملف.',
+                'error' => $exception->getMessage(),
+            ], 500);
+        }
     }
 
     /**
@@ -277,28 +342,89 @@ class MediaController
      * @param  UploadedFile  $file  The audio file to be uploaded.
      * @return JsonResponse The JSON response indicating the success of the upload.
      */
-    public function audio(string $model, int $model_id, UploadedFile $file): JsonResponse
-    {
-        if (!file_exists($this->directory . '/audio/' . $model)) {
-            mkdir(($this->directory . '/audio/' . $model), 0777, true);
+    public function audio(
+        string $model,
+        int $model_id,
+        UploadedFile $file
+    ): JsonResponse {
+        if (!$file->isValid()) {
+            return response()->json([
+                'message' => 'ملف الصوت غير صالح.',
+                'error' => $file->getErrorMessage(),
+            ], 422);
         }
 
-        $data['name'] = date('YmdHis') . '-' . uniqid() . '-' . explode('.', $file->getClientOriginalName())[0];
-        $data['extension'] = explode('.', $file->getClientOriginalName())[1];
+        $originalName = pathinfo(
+            $file->getClientOriginalName(),
+            PATHINFO_FILENAME
+        );
 
-        $data['file_name'] = $model . '/' . $model_id . '-' . $data['name'] . '.' . $data['extension'];
+        $extension = strtolower(
+            $file->getClientOriginalExtension()
+        );
 
-        $file->move($this->directory . '/audio/' . $model, $data['file_name']);
-        Media::create([
-            'model' => $model,
-            'model_id' => $model_id,
-            'file_name' => $data['name'],
-            'format' => $data['extension'],
-        ]);
+        $safeOriginalName = preg_replace(
+            '/[^A-Za-z0-9_-]/',
+            '-',
+            $originalName
+        );
 
-        return response()->json([
-            'message' => 'success',
-        ], 200);
+        $name = now()->format('YmdHis')
+            . '-'
+            . uniqid()
+            . '-'
+            . trim($safeOriginalName, '-');
+
+        $storedFileName = $model_id
+            . '-'
+            . $name
+            . '.'
+            . $extension;
+
+        $destinationDirectory = $this->directory
+            . DIRECTORY_SEPARATOR
+            . 'audio'
+            . DIRECTORY_SEPARATOR
+            . $model;
+
+        File::ensureDirectoryExists(
+            $destinationDirectory,
+            0755,
+            true
+        );
+
+        try {
+            $file->move(
+                $destinationDirectory,
+                $storedFileName
+            );
+
+            $media = Media::create([
+                'model' => $model,
+                'model_id' => $model_id,
+                'file_name' => $name,
+                'format' => $extension,
+            ]);
+
+            return response()->json([
+                'message' => 'success',
+                'data' => [
+                    'id' => $media->id,
+                    'file_name' => $storedFileName,
+                    'path' => 'audio/'
+                        . $model
+                        . '/'
+                        . $storedFileName,
+                ],
+            ]);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return response()->json([
+                'message' => 'حدث خطأ أثناء رفع الصوت.',
+                'error' => $exception->getMessage(),
+            ], 500);
+        }
     }
 
     /**
@@ -311,28 +437,88 @@ class MediaController
      *
      * @throws \Exception If an error occurs during the video upload process.
      */
-    public function video(string $model, int $model_id, UploadedFile $file): JsonResponse
-    {
-
-        if (!file_exists($this->directory . '/video/' . $model)) {
-            mkdir(($this->directory . '/video/' . $model), 0777, true);
+    public function video(
+        string $model,
+        int $model_id,
+        UploadedFile $file
+    ): JsonResponse {
+        if (!$file->isValid()) {
+            return response()->json([
+                'message' => 'ملف الفيديو غير صالح.',
+                'error' => $file->getErrorMessage(),
+            ], 422);
         }
 
-        $data['name'] = date('YmdHis') . '-' . uniqid() . '-' . explode('.', $file->getClientOriginalName())[0];
-        $data['extension'] = explode('.', $file->getClientOriginalName())[1];
+        $originalName = pathinfo(
+            $file->getClientOriginalName(),
+            PATHINFO_FILENAME
+        );
 
-        $data['file_name'] = $model . '/' . $model_id . '-' . $data['name'] . '.' . $data['extension'];
+        $extension = strtolower(
+            $file->getClientOriginalExtension()
+        );
 
-        $file->move($this->directory . '/video/' . $model, $data['file_name']);
-        Media::create([
-            'model' => $model,
-            'model_id' => $model_id,
-            'file_name' => $data['name'],
-            'format' => $data['extension'],
-        ]);
+        $safeOriginalName = preg_replace(
+            '/[^A-Za-z0-9_-]/',
+            '-',
+            $originalName
+        );
 
-        return response()->json([
-            'message' => 'success',
-        ], 200);
+        $name = now()->format('YmdHis')
+            . '-'
+            . uniqid()
+            . '-'
+            . trim($safeOriginalName, '-');
+
+        $storedFileName = $model_id
+            . '-'
+            . $name
+            . '.'
+            . $extension;
+
+        $destinationDirectory = $this->directory
+            . DIRECTORY_SEPARATOR
+            . 'video'
+            . DIRECTORY_SEPARATOR
+            . $model;
+
+        File::ensureDirectoryExists(
+            $destinationDirectory,
+            0755,
+            true
+        );
+
+        try {
+            $file->move(
+                $destinationDirectory,
+                $storedFileName
+            );
+
+            $media = Media::create([
+                'model' => $model,
+                'model_id' => $model_id,
+                'file_name' => $name,
+                'format' => $extension,
+            ]);
+
+            return response()->json([
+                'message' => 'success',
+                'data' => [
+                    'id' => $media->id,
+                    'file_name' => $storedFileName,
+                    'path' => 'video/'
+                        . $model
+                        . '/'
+                        . $storedFileName,
+                ],
+            ]);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return response()->json([
+                'message' => 'حدث خطأ أثناء رفع الفيديو.',
+                'error' => $exception->getMessage(),
+            ], 500);
+        }
     }
 }
