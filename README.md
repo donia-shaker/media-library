@@ -91,6 +91,7 @@ Usage:
 ```php
 $media_controller->saveImage($model, $model_id, $file, $format, $maxWidth, $maxHeight, $quality);
 ```
+`$format`, `$maxWidth`, `$maxHeight`, and `$quality` are optional.
 
 ### Create Temporary Image
 
