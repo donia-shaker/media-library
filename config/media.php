@@ -6,7 +6,7 @@ return [
     'storagePath' => storage_path('app/public/media'),
 
     // use `$storagePath` if true, otherwise use `$publicPath`
-    'useStorage' => env('MEDIA_uSE_STORAGE', false),
+    'useStorage' => env('MEDIA_USE_STORAGE', false),
 
     // if true, the package will create thumbnails for images, otherwise it will not
     'createThumbnails' => env('MEDIA_CREATE_THUMBNAILS', true),
