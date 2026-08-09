@@ -43,7 +43,7 @@ class MediaController
      *
      * @throws \Exception If an error occurs during the image upload process.
      */
-    public function uploadImage($model, $model_id, $file, $format = null)
+    public function uploadImage($model, $model_id, $file, $format = null, $maxWidth = null, $maxHeight = null , $quality = 80)
     {
 
         if (!is_dir($this->directory . '/images/' . $model)) {
@@ -58,10 +58,20 @@ class MediaController
         $data['file_name'] = $model . '/' . $model_id . '-' . $data['name'] . '.' . $data['extension'];
 
         try {
-            $this->manager
-                ->read($file)
-                ->encodeByExtension($data['extension'], 80)
+            $image = $this->manager->read($file);
+
+            // Resize only when width or height is provided
+            if ($maxWidth !== null || $maxHeight !== null) {
+                $image->scaleDown(
+                    width: $maxWidth,
+                    height: $maxHeight
+                );
+            }
+
+            $image
+                ->encodeByExtension('webp', $quality)
                 ->save($this->directory . '/images/' . $data['file_name']);
+
             $data['image'] = $data['file_name'];
         } catch (\Exception $e) {
             $data['image'] = null;
@@ -108,11 +118,11 @@ class MediaController
      * @param  mixed  $file  The file to be saved.
      * @return array Data about the saved image and thumbnail.
      */
-    public function saveImage($model, $model_id, $file, $format = null)
+    public function saveImage($model, $model_id, $file, $format = null, $maxWidth = null, $maxHeight = null, $quality = null)
     {
-        $data['image'] = $this->uploadImage($model, $model_id, $file, $format);
+        $data['image'] = $this->uploadImage($model, $model_id, $file, $format, $maxWidth, $maxHeight, $quality);
         if ($data['image']['image'] == null) {
-            $data['image'] = $this->uploadImage($model, $model_id, $file, $format);
+            $data['image'] = $this->uploadImage($model, $model_id, $file, $format, $maxWidth, $maxHeight, $quality);
         }
 
         $new_image = Media::create([
@@ -123,14 +133,15 @@ class MediaController
         ]);
 
         // upload thumb
-        $data['thumb'] = $this->createThumb($model, $model_id, $data['image']['name']);
-        if ($data['thumb']['thumb'] == null) {
-            $data['thumb'] = $this->createThumb($model, $model_id, $data['image']['name']);
-        } else {
-            $new_image->has_thumb = 1;
-            $new_image->save();
+        if (config('media.createThumbnails')) {
+            $data['thumb'] = $this->createThumb($model, $model_id, $data['image']['name'], $format);
+            if ($data['thumb']['thumb'] == null) {
+                $data['thumb'] = $this->createThumb($model, $model_id, $data['image']['name'], $format);
+            } else {
+                $new_image->has_thumb = 1;
+                $new_image->save();
+            }
         }
-
         return $data;
     }
 
