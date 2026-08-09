@@ -23,7 +23,7 @@ This package provides a set of functions for handling media files, including ima
 
 - **Versatile Storage Options**: Seamlessly store and manage your files in both public and private storage environments.
 - **Image Conversion Made Easy**: Effortlessly convert and store images in multiple formats to suit all your needs.
-- **Automatic Thumbnail Generation**: Instantly create and manage image thumbnails upon upload, saving you time and effort.
+- **Automatic Thumbnail Generation**: Automatically generate image thumbnails on upload, with an option to enable or disable thumbnail creation, saving you time and effort.
 - **Universal File Storage**: Store and organize any file type, including documents, videos, and audio files.
 - **Soft Delete Support**: Safeguard your data with soft delete functionality, allowing you to restore accidentally deleted files easily.
 - **URL Generation**: Instantly generate shareable URLs for your files, making it simple to share and access your stored content.
@@ -56,6 +56,7 @@ To install the `DoniaShaker\MediaLibrary` package, follow these steps:
 
    ```env
    MEDIA_USE_STORAGE=true|false
+   MEDIA_CREATE_THUMBNAILS=true|false
    ```
 
 5. Run the package's migrations to create the necessary database tables:
@@ -84,11 +85,11 @@ $media_controller =  new MediaController();
 
 ### Save Image
 
-This function saves an image file to the media library, generates a thumbnail, and associates it with the current model.
+This function saves an image, optionally resizes it, controls image quality, and generates a thumbnail when enabled.
 Usage:
 
 ```php
-$media_controller->saveImage($model, $model_id, $file, $format);
+$media_controller->saveImage($model, $model_id, $file, $format, $maxWidth, $maxHeight, $quality);
 ```
 
 ### Create Temporary Image
