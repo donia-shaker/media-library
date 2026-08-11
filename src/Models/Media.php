@@ -131,16 +131,26 @@ class Media extends Model
     }
     protected function getCurrentPrivateAuth()
     {
-        $guard = config(
-            'media.privateAuthGuard',
-            'sanctum'
+        $guards = array_filter(
+            array_map(
+                'trim',
+                explode(',', config('media.privateAuthGuards', 'sanctum'))
+            )
         );
 
-        try {
-            return Auth::guard($guard)->user();
-        } catch (\Throwable $e) {
-            return null;
+        foreach ($guards as $guard) {
+            try {
+                $user = Auth::guard($guard)->user();
+
+                if ($user) {
+                    return $user;
+                }
+            } catch (\Throwable $e) {
+                continue;
+            }
         }
+
+        return null;
     }
     public function getRelativePath(): string
     {

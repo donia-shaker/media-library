@@ -7,7 +7,7 @@ return [
 
     'privatePath' => storage_path('app/private/media'),
 
-    'privateAuthGuard' => env('MEDIA_PRIVATE_AUTH_GUARD','sanctum'),
+    'privateAuthGuards' => env('MEDIA_PRIVATE_AUTH_GUARD', 'sanctum'),
 
     // use `$storagePath` if true, otherwise use `$publicPath`
     'useStorage' => env('MEDIA_USE_STORAGE', false),

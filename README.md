@@ -24,7 +24,9 @@ This package provides a set of functions for handling media files, including ima
     - [Save Private Document](#save-private-document)
     - [Save Private Audio](#save-private-audio)
     - [Save Private Video](#save-private-video)
-  - [Private Media Authentication Guard](#private-media-authentication-guard)
+  - [Private Media Authentication Guards](#private-media-authentication-guards)
+    - [Single Guard](#single-guard)
+    - [Multiple Guards](#multiple-guards)
   - [Private Media URL](#private-media-url)
   - [Access Private Media From Frontend](#access-private-media-from-frontend)
     - [Bearer Token Authentication](#bearer-token-authentication)
@@ -250,45 +252,75 @@ $media_controller->audio($model, $model_id, $file, 'private');
 $media_controller->video($model, $model_id, $file, 'private');
 ```
 
-## Private Media Authentication Guard
+## Private Media Authentication Guards
 
-Private media authentication is controlled by:
+Private media authentication is controlled by the configured authentication guards.
+
+By default, the package uses the `sanctum` guard:
 
 ```php
-'privateAuthGuard' => env('MEDIA_PRIVATE_AUTH_GUARD', 'sanctum'),
-```
-
-The default guard is:
-
-```text
-sanctum
+'privateAuthGuardss' => env('MEDIA_PRIVATE_AUTH_GUARDS', 'sanctum'),
 ```
 
 If the application already uses Sanctum, no additional configuration is required.
 
-For a JWT project using the `api` guard:
+### Single Guard
+
+For a JWT-based application using the `api` guard:
 
 ```env
-MEDIA_PRIVATE_AUTH_GUARD=api
+MEDIA_PRIVATE_AUTH_GUARDS=api
 ```
 
 For another custom guard:
 
 ```env
-MEDIA_PRIVATE_AUTH_GUARD=delegate
+MEDIA_PRIVATE_AUTH_GUARDS=delegate
 ```
 
-The package internally authenticates the private media request using the configured guard.
+### Multiple Guards
+
+The package also supports multiple authentication guards.
+
+Configure them as a comma-separated list:
+
+```env
+MEDIA_PRIVATE_AUTH_GUARDS=sanctum,api,delegate
+```
+
+The package checks the configured guards in order and uses the first guard that has an authenticated user.
 
 Conceptually:
 
 ```php
-Auth::guard(config('media.privateAuthGuard', 'sanctum'))->user();
+$guards = explode(
+    ',',
+    config('media.privateAuthGuardss', 'sanctum')
+);
+
+foreach ($guards as $guard) {
+    $user = Auth::guard(trim($guard))->user();
+
+    if ($user) {
+        return $user;
+    }
+}
 ```
 
-The frontend does not need to know the guard name.
+This allows the same media library to work with applications that have multiple authentication systems, such as:
 
-The frontend only needs to send the authentication credentials required by the application.
+```text
+sanctum
+api
+admin
+delegate
+```
+
+The frontend does not need to know which guard is being used.
+
+The frontend only needs to send the authentication credentials required by the application, such as a Bearer token or the configured authentication mechanism.
+
+The package handles guard resolution internally.
 
 ## Private Media URL
 

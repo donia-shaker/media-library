@@ -28,32 +28,17 @@ class PrivateMediaController extends Controller
         }
 
         /*
-         * 3. Get auth guard from package config
-         *
-         * Default: sanctum
-         * JWT project can use:
-         * MEDIA_PRIVATE_AUTH_GUARD=api
+         * 3. Get authenticated user from
+         * multiple configured guards
          */
-        $guard = config(
-            'media.privateAuthGuard',
-            'sanctum'
-        );
-
-        /*
-         * 4. Get current authenticated user
-         */
-        try {
-            $user = Auth::guard($guard)->user();
-        } catch (\Throwable $e) {
-            abort(404);
-        }
+        $user = $this->getCurrentPrivateAuth();
 
         if (!$user) {
             abort(404);
         }
 
         /*
-         * 5. Signed URL must belong to
+         * 4. Signed URL must belong to
          * current authenticated user
          */
         if (
@@ -65,7 +50,7 @@ class PrivateMediaController extends Controller
         }
 
         /*
-         * 6. Original file or thumbnail
+         * 5. Original file or thumbnail
          */
         if ($request->boolean('thumb')) {
 
@@ -85,15 +70,13 @@ class PrivateMediaController extends Controller
                 . $media->file_name
                 . '.'
                 . $media->format;
-
         } else {
 
-            $relativePath =
-                $media->getRelativePath();
+            $relativePath = $media->getRelativePath();
         }
 
         /*
-         * 7. Build physical private file path
+         * 6. Build physical private file path
          */
         $basePath = rtrim(
             config('media.privatePath'),
@@ -112,27 +95,78 @@ class PrivateMediaController extends Controller
             . $relativePath;
 
         /*
-         * 8. File must exist
+         * 7. File must exist
          */
         if (!is_file($fullPath)) {
             abort(404);
         }
 
         /*
-         * 9. Return file securely
+         * 8. Return file securely
          */
         return response()->file(
             $fullPath,
             [
                 'Cache-Control' =>
-                    'private, no-store, max-age=0',
+                'private, no-store, max-age=0',
 
                 'Pragma' =>
-                    'no-cache',
+                'no-cache',
 
                 'X-Content-Type-Options' =>
-                    'nosniff',
+                'nosniff',
             ]
         );
+    }
+
+    /**
+     * Get authenticated user from any
+     * configured private media guard.
+     */
+    protected function getCurrentPrivateAuth()
+    {
+        $guards = config(
+            'media.privateAuthGuardss',
+            'sanctum'
+        );
+
+        /*
+         * Support:
+         *
+         * privateAuthGuardss => 'sanctum,api,admin'
+         *
+         * or:
+         *
+         * privateAuthGuardss => [
+         *     'sanctum',
+         *     'api',
+         *     'admin',
+         * ]
+         */
+
+        if (is_string($guards)) {
+            $guards = explode(',', $guards);
+        }
+
+        $guards = array_filter(
+            array_map(
+                'trim',
+                $guards
+            )
+        );
+
+        foreach ($guards as $guard) {
+            try {
+                $user = Auth::guard($guard)->user();
+
+                if ($user) {
+                    return $user;
+                }
+            } catch (\Throwable $e) {
+                continue;
+            }
+        }
+
+        return null;
     }
 }
