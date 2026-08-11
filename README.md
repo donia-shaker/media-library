@@ -259,7 +259,7 @@ Private media authentication is controlled by the configured authentication guar
 By default, the package uses the `sanctum` guard:
 
 ```php
-'privateAuthGuardss' => env('MEDIA_PRIVATE_AUTH_GUARDS', 'sanctum'),
+'privateAuthGuards' => env('MEDIA_PRIVATE_AUTH_GUARDS', 'sanctum'),
 ```
 
 If the application already uses Sanctum, no additional configuration is required.
@@ -295,7 +295,7 @@ Conceptually:
 ```php
 $guards = explode(
     ',',
-    config('media.privateAuthGuardss', 'sanctum')
+    config('media.privateAuthGuards', 'sanctum')
 );
 
 foreach ($guards as $guard) {

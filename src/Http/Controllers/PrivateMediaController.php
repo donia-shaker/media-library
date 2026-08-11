@@ -126,18 +126,18 @@ class PrivateMediaController extends Controller
     protected function getCurrentPrivateAuth()
     {
         $guards = config(
-            'media.privateAuthGuardss',
+            'media.privateAuthGuards',
             'sanctum'
         );
 
         /*
          * Support:
          *
-         * privateAuthGuardss => 'sanctum,api,admin'
+         * privateAuthGuards => 'sanctum,api,admin'
          *
          * or:
          *
-         * privateAuthGuardss => [
+         * privateAuthGuards => [
          *     'sanctum',
          *     'api',
          *     'admin',
