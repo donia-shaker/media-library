@@ -5,6 +5,8 @@ namespace DoniaShaker\MediaLibrary\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\URL;
 
 class Media extends Model
 {
@@ -29,11 +31,65 @@ class Media extends Model
             $folder = $this->format; // أي نوع آخر
         }
 
-        return $directory . $type . '/' . $folder . '/' . $this->model . '/' . $this->model_id . '-' . $this->file_name . '.' . $this->format;
+        $path =
+            $type
+            . '/'
+            . $folder
+            . '/'
+            . $this->model
+            . '/'
+            . $this->model_id
+            . '-'
+            . $this->file_name
+            . '.'
+            . $this->format;
+
+        if ($this->visibility === 'private') {
+
+            $user = $this->getCurrentPrivateAuth();
+
+            if (!$user) {
+                return null;
+            }
+
+            return URL::signedRoute(
+                'media-library.private.show',
+                [
+                    'media' => $this->id,
+                    'auth_id' => $user->getAuthIdentifier(),
+                ]
+            );
+        }
+
+        return $directory . $path;
     }
 
     public function getThumbUrlAttribute()
     {
+        if ($this->is_temp || !$this->has_thumb) {
+            return null;
+        }
+        if ($this->visibility === 'private') {
+
+            if ($this->is_temp) {
+                return null;
+            }
+
+            $user = $this->getCurrentPrivateAuth();
+
+            if (!$user) {
+                return null;
+            }
+
+            return URL::signedRoute(
+                'media-library.private.show',
+                [
+                    'media' => $this->id,
+                    'auth_id' => $user->getAuthIdentifier(),
+                    'thumb' => 1,
+                ]
+            );
+        }
         $directory = config('media.useStorage') ? config('media.storageUrl') : config('media.publicUrl');
 
         $type = $this->is_temp ? null : '/thumb';
@@ -72,5 +128,45 @@ class Media extends Model
             'flac',
             'aac'
         ]);
+    }
+    protected function getCurrentPrivateAuth()
+    {
+        $guard = config(
+            'media.privateAuthGuard',
+            'sanctum'
+        );
+
+        try {
+            return Auth::guard($guard)->user();
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+    public function getRelativePath(): string
+    {
+        $type = $this->is_temp
+            ? 'temp/'
+            : '';
+
+        if ($this->isImageFormat($this->format)) {
+            $folder = 'images';
+        } elseif ($this->isVideoFormat($this->format)) {
+            $folder = 'video';
+        } elseif ($this->isAudioFormat($this->format)) {
+            $folder = 'audio';
+        } else {
+            $folder = $this->format;
+        }
+
+        return $type
+            . $folder
+            . '/'
+            . $this->model
+            . '/'
+            . $this->model_id
+            . '-'
+            . $this->file_name
+            . '.'
+            . $this->format;
     }
 }

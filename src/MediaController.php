@@ -43,7 +43,7 @@ class MediaController
      *
      * @throws \Exception If an error occurs during the image upload process.
      */
-    public function uploadImage($model, $model_id, $file, $format = null, $maxWidth = null, $maxHeight = null , $quality = 80)
+    public function uploadImage($model, $model_id, $file, $format = null, $maxWidth = null, $maxHeight = null, $quality = 80)
     {
 
         if (!is_dir($this->directory . '/images/' . $model)) {
@@ -109,6 +109,23 @@ class MediaController
 
         return $data;
     }
+    /**
+     * Get the directory path based on visibility.
+     *
+     * @param  string  $visibility  The visibility type ('public' or 'private').
+     * @return string The directory path based on the visibility.
+     */
+
+    protected function getDirectory($visibility)
+    {
+        if ($visibility === 'private') {
+            return config('media.privatePath');
+        }
+
+        return config('media.useStorage')
+            ? config('media.storagePath')
+            : config('media.publicPath');
+    }
 
     /**
      * Saves an image for a specific model.
@@ -118,8 +135,11 @@ class MediaController
      * @param  mixed  $file  The file to be saved.
      * @return array Data about the saved image and thumbnail.
      */
-    public function saveImage($model, $model_id, $file, $format = null, $maxWidth = null, $maxHeight = null, $quality = null)
+    public function saveImage($model, $model_id, $file, $format = null, $maxWidth = null, $maxHeight = null, $quality = null, $visibility = 'public')
     {
+        $this->directory = $this->getDirectory($visibility);
+
+
         $data['image'] = $this->uploadImage($model, $model_id, $file, $format, $maxWidth, $maxHeight, $quality);
         if ($data['image']['image'] == null) {
             $data['image'] = $this->uploadImage($model, $model_id, $file, $format, $maxWidth, $maxHeight, $quality);
@@ -130,6 +150,7 @@ class MediaController
             'model_id' => $model_id,
             'file_name' => $data['image']['name'],
             'format' => $data['image']['extension'],
+            'visibility' => $visibility,
         ]);
 
         // upload thumb
@@ -155,6 +176,7 @@ class MediaController
      */
     public function uploadTempImage($model, $model_id, $file)
     {
+
         if (!file_exists($this->directory . '/temp/images/' . $model)) {
             mkdir(($this->directory . '/temp/images/' . $model), 0777, true);
         }
@@ -181,8 +203,11 @@ class MediaController
      * @param  mixed  $file  The file to be saved.
      * @return array Data about the saved image.
      */
-    public function saveTempImage(string $model, int $model_id, UploadedFile $file)
+    public function saveTempImage(string $model, int $model_id, UploadedFile $file, $visibility = 'public')
     {
+        $this->directory = $this->getDirectory($visibility);
+
+
         $data['image'] = $this->uploadTempImage($model, $model_id, $file);
         if ($data['image']['image'] == null) {
             $data['image'] = $this->uploadTempImage($model, $model_id, $file);
@@ -195,6 +220,7 @@ class MediaController
             'format' => $data['image']['extension'],
             'is_active' => 0,
             'is_temp' => 1,
+            'visibility' => $visibility,
         ]);
 
         return $data;
@@ -259,7 +285,8 @@ class MediaController
     public function uploadFile(
         string $model,
         int $model_id,
-        UploadedFile $file
+        UploadedFile $file,
+        string $visibility = 'public'
     ): JsonResponse {
         if (!$file->isValid()) {
             return response()->json([
@@ -267,6 +294,9 @@ class MediaController
                 'error' => $file->getErrorMessage(),
             ], 422);
         }
+        $this->directory = $this->getDirectory($visibility);
+
+
 
         // يجب قراءة معلومات الملف قبل move
         $originalName = pathinfo(
@@ -321,6 +351,7 @@ class MediaController
                 'model_id' => $model_id,
                 'file_name' => $data['name'],
                 'format' => $extension,
+                'visibility' => $visibility,
             ]);
 
             return response()->json([
@@ -353,8 +384,11 @@ class MediaController
      * @param  UploadedFile  $file  The audio file to be uploaded.
      * @return JsonResponse The JSON response indicating the success of the upload.
      */
-    public function audio(string $model, int $model_id, UploadedFile $file): JsonResponse
+    public function audio(string $model, int $model_id, UploadedFile $file, string $visibility = 'public'): JsonResponse
     {
+        $this->directory = $this->getDirectory($visibility);
+
+
         if (!file_exists($this->directory . '/audio/' . $model)) {
             mkdir(($this->directory . '/audio/' . $model), 0777, true);
         }
@@ -370,6 +404,7 @@ class MediaController
             'model_id' => $model_id,
             'file_name' => $data['name'],
             'format' => $data['extension'],
+            'visibility' => $visibility,
         ]);
 
         return response()->json([
@@ -387,8 +422,10 @@ class MediaController
      *
      * @throws \Exception If an error occurs during the video upload process.
      */
-    public function video(string $model, int $model_id, UploadedFile $file): JsonResponse
+    public function video(string $model, int $model_id, UploadedFile $file, string $visibility = 'public'): JsonResponse
     {
+        $this->directory = $this->getDirectory($visibility);
+
 
         if (!file_exists($this->directory . '/video/' . $model)) {
             mkdir(($this->directory . '/video/' . $model), 0777, true);
@@ -405,6 +442,7 @@ class MediaController
             'model_id' => $model_id,
             'file_name' => $data['name'],
             'format' => $data['extension'],
+            'visibility' => $visibility,
         ]);
 
         return response()->json([
