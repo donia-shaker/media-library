@@ -56,7 +56,8 @@ class Media extends Model
                 'media-library.private.show',
                 [
                     'media' => $this->id,
-                    'auth_id' => $user->getAuthIdentifier(),
+                    'auth_guard' => $user['guard'],
+                    'auth_id' => $user['user']->getAuthIdentifier(),
                 ]
             );
         }
@@ -85,7 +86,8 @@ class Media extends Model
                 'media-library.private.show',
                 [
                     'media' => $this->id,
-                    'auth_id' => $user->getAuthIdentifier(),
+                    'auth_id' => $user['user']->getAuthIdentifier(),
+                    'auth_guard' => $user['guard'],
                     'thumb' => 1,
                 ]
             );
@@ -129,21 +131,32 @@ class Media extends Model
             'aac'
         ]);
     }
-    protected function getCurrentPrivateAuth()
+    protected function getCurrentPrivateAuth(): ?array
     {
-        $guards = array_filter(
-            array_map(
-                'trim',
-                explode(',', config('media.privateAuthGuards', 'sanctum'))
-            )
+        $guards = config(
+            'media.privateAuthGuards',
+            'sanctum'
         );
 
+        if (is_string($guards)) {
+            $guards = explode(',', $guards);
+        }
+
         foreach ($guards as $guard) {
+            $guard = trim($guard);
+
+            if (!$guard) {
+                continue;
+            }
+
             try {
                 $user = Auth::guard($guard)->user();
 
                 if ($user) {
-                    return $user;
+                    return [
+                        'user' => $user,
+                        'guard' => $guard,
+                    ];
                 }
             } catch (\Throwable $e) {
                 continue;
